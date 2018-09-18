@@ -21,7 +21,7 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
     ]
   }
 
-  @objc func requiresMainQueueSetup() -> [Bool: Any] {
+  @objc func requiresMainQueueSetup() -> Bool {
     return true
   }
 
