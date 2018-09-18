@@ -14,32 +14,36 @@ import MessageUI
 class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
   var resolve: RCTPromiseResolveBlock?
   var reject: RCTPromiseRejectBlock?
-  
+
   @objc func constantsToExport() -> [String: Any] {
     return [
       "name": "RNMessageCompose",
     ]
   }
-  
+
+  @objc func requiresMainQueueSetup() -> [Bool: Any] {
+    return true
+  }
+
   @objc func canSendText(_ resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
     return resolve(MFMessageComposeViewController.canSendText())
   }
-  
+
   @objc func canSendAttachments(_ resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
     return resolve(MFMessageComposeViewController.canSendAttachments())
   }
-  
+
   @objc func canSendSubject(_ resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
     return resolve(MFMessageComposeViewController.canSendSubject())
   }
-  
+
   func mimeToUti(mimeType: String?) -> String? {
     if let mimeType = mimeType, let type = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil) {
       return type.takeRetainedValue() as String
     }
     return nil
   }
-  
+
   func textToData(utf8: String?, base64: String?) -> Data? {
     if let utf8 = utf8 {
       return utf8.data(using: .utf8)
@@ -49,22 +53,22 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
     }
     return nil
   }
-  
+
   func toFilename(filename: String?, ext: String?) -> String? {
     if let ext = ext {
       return (filename ?? UUID().uuidString) + ext
     }
     return nil
   }
-  
+
   @objc func send(_ data: [String: Any], resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
     if !MFMessageComposeViewController.canSendText() {
       reject("cannotSendText", "Cannot send text", nil)
       return
     }
-    
+
     let vc = MFMessageComposeViewController()
-    
+
     if let value = data["recipients"] as? [String] {
       vc.recipients = value
     }
@@ -81,9 +85,9 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
         }
       }
     }
-    
+
     vc.messageComposeDelegate = self
-    
+
     if present(viewController: vc) {
       self.resolve = resolve
       self.reject = reject
@@ -91,7 +95,7 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
       reject("failed", "Could not present view controller", nil)
     }
   }
-  
+
   func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
     switch (result) {
     case .cancelled:
@@ -106,10 +110,10 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
     }
     resolve = nil
     reject = nil
-    
+
     controller.dismiss(animated: true, completion: nil)
   }
-  
+
   func getTopViewController(window: UIWindow?) -> UIViewController? {
     if let window = window {
       var top = window.rootViewController
@@ -128,7 +132,7 @@ class RNMessageCompose: NSObject, MFMessageComposeViewControllerDelegate {
     }
     return nil
   }
-  
+
   func present(viewController: UIViewController) -> Bool {
     if let topVc = getTopViewController(window: UIApplication.shared.keyWindow) {
       topVc.present(viewController, animated: true, completion: nil)
