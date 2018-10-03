@@ -7,6 +7,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Telephony;
 import android.util.Base64;
+import android.util.Log;
+import android.support.v4.content.FileProvider;
 
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.BaseActivityEventListener;
@@ -32,8 +34,7 @@ import java.util.UUID;
 
 
 public class RNMessageComposeModule extends ReactContextBaseJavaModule {
-    private static final int ACTIVITY_SEND = 129382;
-
+    private static final int ACTIVITY_SEND = 55044;
     private Promise mPromise;
 
     private final ActivityEventListener mActivityEventListener = new BaseActivityEventListener() {
@@ -160,19 +161,9 @@ public class RNMessageComposeModule extends ReactContextBaseJavaModule {
             address = "";
         }
 
-        Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + address));
-        // intent.setPackage("com.android.mms");
-        // intent.setClassName("com.android.mms", "com.android.mms.ui.ComposeMessageActivity");
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            String defaultSmsPackageName = Telephony.Sms.getDefaultSmsPackage(getCurrentActivity());
-            if (defaultSmsPackageName != null) {
-                intent.setPackage(defaultSmsPackageName);
-            }
-        }
-
-        // intent.setType("vnd.android-dir/mms-sms");
-        // intent.setData(Uri.parse("mms:" + address));
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setData(Uri.parse("mms://" + address));
 
         putExtra(intent, "address", address);
         putExtra(intent, "subject", getString(data, "subject"));
@@ -180,10 +171,9 @@ public class RNMessageComposeModule extends ReactContextBaseJavaModule {
         // http://stackoverflow.com/a/21388864/692528
         putExtra(intent, intent.EXTRA_TEXT, getString(data, "body"));
         intent.putExtra("exit_on_sent", true);
+        intent.putExtra("compose_mode", true);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-
-        /*
         ReadableMap attachment = getMap(data, "attachment");
         if (attachment != null) {
             byte[] blob = getBlob(attachment, "data");
@@ -215,25 +205,27 @@ public class RNMessageComposeModule extends ReactContextBaseJavaModule {
                         fo.close();
                     }
                 }
-
-                intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(tempFile));
+                intent.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(getCurrentActivity().getBaseContext(), "com.encouragex.fileprovider", tempFile));
+                // Log.e("istoEOTempFile", "tempFile== " + FileProvider.getUriForFile(getCurrentActivity().getBaseContext(), "com.encouragex.fileprovider", tempFile));
                 if (mimeType != null) {
                     intent.setType(mimeType);
+                    // Log.e("istoEOMime","mimeType== " +  mimeType);
                 }
             } catch (Exception e) {
                 // do nothing
             }
         }
-        */
-
 
         try {
+            intent.setType("vnd.android-dir/mms-sms");
             getCurrentActivity().startActivityForResult(intent, ACTIVITY_SEND);
             mPromise = promise;
         } catch (ActivityNotFoundException e) {
+            // Log.e("IstoEhUmaTag", "ffs", e);
             promise.reject("failed", "Activity not found");
         } catch (Exception e) {
-            promise.reject("failed", "Unknown Error");
+            // Log.e("IstoEhUmaTag", "ffs", e);
+            promise.reject("failed", e);
         }
     }
 }
